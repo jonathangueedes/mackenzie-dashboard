@@ -1,0 +1,41 @@
+# Environments and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Local/editor artifacts
+.vscode/
+backups/
+co2-emissions-per-capita/
+
+# Raw and intermediate data (ignored by default)
+*.csv
+*.xlsx
+*.xls
+*.zip
+*.gz
+*.html
+*.parquet
+*.pdf
+
+# Keep only data files imprescindiveis para rodar o dashboard
+!dataset_automotivos_consolidado_2020_2025.parquet
+!vendas-combustiveis-m3-1990-2025.parquet
+
+!outputs/
+outputs/*
+
+!outputs/abve_eletrificados_serie_anual.parquet
+!outputs/co2e_anual.parquet
+!outputs/fuel_annual_produto.parquet
+!outputs/fuel_annual_regiao.parquet
+!outputs/fuel_annual_uf.parquet
+!outputs/fuel_municipio_distribuicao.parquet
+!outputs/fuel_municipio_produto_etanol_gasolina.parquet
+!outputs/ipca_anual_2020_2025.parquet
+!outputs/sidra_ipca_grupos_anual_2020_2025.parquet
+
+# Keep project code and scripts
+!dashboard_combustiveis_co2.py
+!analise_exploratoria_automotivos.py
+!export_dashboard_html.py
