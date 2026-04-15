@@ -85,24 +85,7 @@ def read_tabular_bytes(filename: str, data: bytes) -> pd.DataFrame:
         for sep in [";", ",", "\t"]:
             try:
                 df = pd.read_csv(io.BytesIO(data), encoding=enc, sep=sep, low_memory=False)
-                if best is None or df.shape[1] > be
-st.title("📊 Dashboard Analítico - Combustíveis e Emissões")
-
-st.markdown("## 🎯 Objetivo")
-st.markdown("Analisar dados de combustíveis e emissões para identificar padrões, tendências e relações relevantes.")
-
-st.markdown("## ❓ Perguntas Analíticas")
-st.markdown("""
-1. Como evoluiu o consumo de combustíveis ao longo do tempo?
-2. Quais regiões apresentam maior consumo?
-3. Existe relação entre consumo de combustível e emissão de CO2?
-4. Qual combustível é mais utilizado?
-5. Há crescimento no uso de veículos eletrificados?
-6. Existem diferenças significativas entre estados?
-7. Há tendência de aumento ou redução de emissões?
-""")
-
-st.shape[1]:
+                if best is None or df.shape[1] > best.shape[1]:
                     best = df
             except Exception:
                 continue
@@ -739,10 +722,24 @@ def render_regional_rankings() -> None:
 
 def main() -> None:
     st.set_page_config(page_title="Mercado de Combustiveis", layout="wide")
-    st.title("Painel estrategico: combustiveis, inflacao, vendas e emissao")
-    st.caption(
-        "Revisao completa das visoes do projeto com foco em leitura executiva, comparabilidade anual e exploracao interativa."
-    )
+    st.title("📊 Dashboard Analítico - Combustíveis e Emissões")
+
+    st.markdown("## 🎯 Objetivo")
+    st.markdown("Analisar dados de combustíveis e emissões para identificar padrões, tendências e relações relevantes.")
+
+    st.markdown("## ❓ Perguntas Analíticas")
+    st.markdown("""
+    1. Como evoluiu o consumo de combustíveis ao longo do tempo?
+    2. Quais regiões apresentam maior consumo?
+    3. Existe relação entre consumo de combustível e emissão de CO2?
+    4. Qual combustível é mais utilizado?
+    5. Há crescimento no uso de veículos eletrificados?
+    6. Existem diferenças significativas entre estados?
+    7. Há tendência de aumento ou redução de emissões?
+    """)
+    #st.caption(
+    #    "Revisao completa das visoes do projeto com foco em leitura executiva, comparabilidade anual e exploracao interativa."
+    #)
 
     tabs = st.tabs([
         "1. Resumo",
