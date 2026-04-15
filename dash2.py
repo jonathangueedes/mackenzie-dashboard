@@ -52,6 +52,17 @@ def money_label(value: float) -> str:
     return f"R$ {value:.2f}"
 
 
+def brl_compact_label(value: float | None) -> str:
+    if value is None or pd.isna(value):
+        return "n/d"
+    abs_value = abs(float(value))
+    if abs_value >= 1_000_000_000:
+        return f"R$ {value / 1_000_000_000:.1f} bi"
+    if abs_value >= 1_000_000:
+        return f"R$ {value / 1_000_000:.1f} mi"
+    return f"R$ {value:,.0f}".replace(",", ".")
+
+
 def classify_fuel_group(produto_norm: str) -> str:
     if "etanol" in produto_norm:
         return "etanol"
@@ -69,6 +80,18 @@ def classify_fuel_group(produto_norm: str) -> str:
         return "querosene iluminante"
     if "oleo_combustivel" in produto_norm:
         return "oleo combustivel"
+    return "outros"
+
+
+def classify_price_group(produto_norm: str) -> str:
+    if "etanol" in produto_norm:
+        return "etanol"
+    if "gasolina" in produto_norm:
+        return "gasolina"
+    if "diesel" in produto_norm:
+        return "diesel"
+    if "gnv" in produto_norm:
+        return "gnv"
     return "outros"
 
 
@@ -294,6 +317,40 @@ def load_fuel_annual_metrics() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
+def load_financial_proxy_annual() -> pd.DataFrame:
+    auto_file = auto_find_anp_sales_file()
+    if auto_file is None:
+        return pd.DataFrame(columns=["ano", "mov_brl", "cobertura_volume", "volume_total_m3"])
+
+    sales_raw = read_tabular_file(auto_file)
+    sales = prepare_anp_sales(sales_raw)
+    sales = sales[sales["ano"].between(YEAR_MIN, YEAR_MAX)].copy()
+    if sales.empty:
+        return pd.DataFrame(columns=["ano", "mov_brl", "cobertura_volume", "volume_total_m3"])
+
+    volume_by_group = sales.groupby(["ano", "produto_grupo"], as_index=False)["volume"].sum()
+    volume_total = volume_by_group.groupby("ano", as_index=False)["volume"].sum().rename(columns={"volume": "volume_total_m3"})
+
+    price = load_fuel_full()[["ano", "Produto", "valor_venda_num"]].copy()
+    price = price[price["valor_venda_num"].notna()].copy()
+    price["produto_grupo"] = price["Produto"].map(normalize_text).map(classify_price_group)
+    price = price[price["produto_grupo"].isin(["etanol", "gasolina", "diesel", "gnv"])].copy()
+    price_by_group = price.groupby(["ano", "produto_grupo"], as_index=False)["valor_venda_num"].mean()
+
+    merged = volume_by_group.merge(price_by_group, on=["ano", "produto_grupo"], how="inner")
+    merged["mov_brl"] = merged["volume"] * 1000 * merged["valor_venda_num"]
+
+    mov_by_year = merged.groupby("ano", as_index=False).agg(
+        mov_brl=("mov_brl", "sum"),
+        volume_precificado_m3=("volume", "sum"),
+    )
+
+    out = volume_total.merge(mov_by_year, on="ano", how="left")
+    out["cobertura_volume"] = out["volume_precificado_m3"] / out["volume_total_m3"].replace(0, pd.NA)
+    return out[["ano", "mov_brl", "cobertura_volume", "volume_total_m3"]].sort_values("ano")
+
+
+@st.cache_data(show_spinner=False)
 def load_ipca_annual() -> pd.DataFrame:
     if IPCA_PARQUET_FILE.exists():
         df = pd.read_parquet(IPCA_PARQUET_FILE, columns=["ano", "ipca_anual_pct"])
@@ -396,42 +453,32 @@ def load_ev_annual() -> pd.DataFrame:
 
 def render_summary() -> None:
     st.subheader("Resumo executivo")
-    fuel = load_fuel_annual_metrics()
     ipca = load_ipca_annual()
     co2 = load_co2e_annual()
+    financial = load_financial_proxy_annual()
     ipca_media_periodo = ipca["ipca_anual_pct"].mean() if not ipca.empty else pd.NA
     ipca_ultimo_ano = ipca.sort_values("ano").iloc[-1]["ipca_anual_pct"] if not ipca.empty else pd.NA
-
-    latest = fuel.sort_values("ano").iloc[-1]
-    first = fuel.sort_values("ano").iloc[0]
+    mov_media_anual = financial["mov_brl"].dropna().mean() if not financial.empty else pd.NA
+    cobertura_media = financial["cobertura_volume"].dropna().mean() * 100 if not financial.empty else pd.NA
+    co2_medio_anual = co2["co2e_mt"].dropna().mean() if not co2.empty else pd.NA
+    emissao_media_card = f"{co2_medio_anual:.0f} Mt CO2e/ano" if pd.notna(co2_medio_anual) else "n/d"
+    if not co2.empty:
+        co2_cover = sorted(pd.to_numeric(co2["ano"], errors="coerce").dropna().astype(int).unique().tolist())
+        emissao_label = f"Emissoes medias ({co2_cover[0]}-{co2_cover[-1]})"
+    else:
+        emissao_label = f"Emissoes medias ({YEAR_MIN}-{YEAR_MAX})"
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Janela analisada", f"{YEAR_MIN}-{YEAR_MAX}")
-    c2.metric("Razao etanol/gasolina", f"{latest['ratio_etanol_gasolina']:.3f}", f"{(latest['ratio_etanol_gasolina']/first['ratio_etanol_gasolina']-1)*100:.1f}%")
-    c3.metric("Municipios etanol competitivo", f"{latest['pct_municipios_etanol_competitivo']:.1f}%")
-    c4.metric("IPCA medio anual (2020-2025)", f"{ipca_media_periodo:.1f}%" if pd.notna(ipca_media_periodo) else "n/d")
+    c2.metric("Movimentacao media anual estimada", brl_compact_label(mov_media_anual))
+    c3.metric("IPCA medio anual (2020-2025)", f"{ipca_media_periodo:.1f}%" if pd.notna(ipca_media_periodo) else "n/d")
+    c4.metric(emissao_label, emissao_media_card)
+
+    if pd.notna(cobertura_media):
+        st.caption(f"Estimativa financeira no periodo: soma anual de volume ANP (m3) x preco medio por combustivel (R$/litro), com cobertura media de volume precificado de {cobertura_media:.1f}%.")
 
     if pd.notna(ipca_ultimo_ano):
         st.caption(f"Referencia: IPCA do ultimo ano da serie ({int(ipca.sort_values('ano').iloc[-1]['ano'])}) = {ipca_ultimo_ano:.1f}%.")
-
-    etanol_var = pct_change(first["preco_etanol"], latest["preco_etanol"])
-    gasolina_var = pct_change(first["preco_gasolina"], latest["preco_gasolina"])
-    ratio_var = pct_change(first["ratio_etanol_gasolina"], latest["ratio_etanol_gasolina"])
-
-    co2_var = None
-    if not co2.empty:
-        co2_ord = co2.sort_values("ano")
-        co2_var = pct_change(co2_ord.iloc[0]["co2e_mt"], co2_ord.iloc[-1]["co2e_mt"])
-
-    render_generated_text(
-        "Leitura automatica",
-        [
-            f"No periodo {YEAR_MIN}-{YEAR_MAX}, o preco medio do etanol variou {format_pct(etanol_var)} e o da gasolina variou {format_pct(gasolina_var)}.",
-            f"A razao etanol/gasolina mudou {format_pct(ratio_var)} no periodo, com valor mais recente em {latest['ratio_etanol_gasolina']:.3f}.",
-            f"No ultimo ano, {latest['pct_municipios_etanol_competitivo']:.1f}% dos municipios ficaram com etanol competitivo (razao <= 0,70).",
-            f"Na serie de CO2e disponivel, a emissao total variou {format_pct(co2_var)}.",
-        ],
-    )
 
     if not co2.empty:
         cover = sorted(co2["ano"].tolist())
