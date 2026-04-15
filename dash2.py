@@ -414,20 +414,6 @@ def render_summary() -> None:
     if pd.notna(ipca_ultimo_ano):
         st.caption(f"Referencia: IPCA do ultimo ano da serie ({int(ipca.sort_values('ano').iloc[-1]['ano'])}) = {ipca_ultimo_ano:.1f}%.")
 
-    trend = fuel[["ano", "preco_etanol", "preco_gasolina", "ratio_etanol_gasolina"]].copy()
-    fig = px.line(
-        trend,
-        x="ano",
-        y=["preco_etanol", "preco_gasolina"],
-        markers=True,
-        title="Preco medio anual: etanol vs gasolina",
-        labels={"value": "Preco (R$/litro)", "variable": "Serie"},
-    )
-    fig.for_each_trace(lambda t: t.update(name=t.name.replace("preco_etanol", "Etanol").replace("preco_gasolina", "Gasolina")))
-    apply_legend(fig, "Serie")
-    st.caption("Como ler: compara o preco medio anual (R$/litro) de etanol e gasolina. Linhas mais proximas indicam menor diferenca de preco entre os combustiveis.")
-    st.plotly_chart(fig, use_container_width=True)
-
     etanol_var = pct_change(first["preco_etanol"], latest["preco_etanol"])
     gasolina_var = pct_change(first["preco_gasolina"], latest["preco_gasolina"])
     ratio_var = pct_change(first["ratio_etanol_gasolina"], latest["ratio_etanol_gasolina"])
