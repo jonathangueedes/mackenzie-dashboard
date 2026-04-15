@@ -52,6 +52,20 @@ def money_label(value: float) -> str:
     return f"R$ {value:.2f}"
 
 
+def apply_legend(fig, title: str = "Legenda"):
+    fig.update_layout(
+        legend_title_text=title,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+        ),
+    )
+    return fig
+
+
 def auto_find_anp_sales_file() -> Path | None:
     patterns = [
         "*vendas*combust*.parquet",
@@ -371,6 +385,7 @@ def render_summary() -> None:
         labels={"value": "Preco (R$/litro)", "variable": "Serie"},
     )
     fig.for_each_trace(lambda t: t.update(name=t.name.replace("preco_etanol", "Etanol").replace("preco_gasolina", "Gasolina")))
+    apply_legend(fig, "Serie")
     st.plotly_chart(fig, use_container_width=True)
 
     if not co2.empty:
@@ -404,6 +419,7 @@ def render_market_views() -> None:
         title="Evolucao anual por produto",
         labels={"valor_venda_num": "Preco medio (R$/litro)", "ano": "Ano"},
     )
+    apply_legend(fig, "Produto")
     st.plotly_chart(fig, use_container_width=True)
 
     c1, c2 = st.columns(2)
@@ -422,6 +438,7 @@ def render_market_views() -> None:
             title="Mapa de calor: preco medio por regiao e ano",
             labels={"x": "Ano", "y": "Regiao", "color": "R$/litro"},
         )
+        fig.update_layout(coloraxis_colorbar=dict(title="R$/litro"))
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -445,7 +462,7 @@ def render_market_views() -> None:
             title="Top 10 UFs: maior preco medio",
         )
         fig.update_traces(textposition="outside", cliponaxis=False)
-        fig.update_layout(coloraxis_showscale=False, margin=dict(r=70), xaxis_title="Preco medio (R$/litro)")
+        fig.update_layout(coloraxis_colorbar=dict(title="Preco medio"), margin=dict(r=90), xaxis_title="Preco medio (R$/litro)")
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -475,6 +492,7 @@ def render_inflation_views() -> None:
         title="Variacao anual: combustiveis x inflacao setorial",
     )
     fig.for_each_trace(lambda t: t.update(name=t.name.replace("var_preco_comb_anual_pct", "Combustiveis")))
+    apply_legend(fig, "Serie")
     fig.update_layout(yaxis_title="Variacao anual (%)")
     st.plotly_chart(fig, use_container_width=True)
 
@@ -490,12 +508,14 @@ def render_inflation_views() -> None:
             labels={"var_preco_comb_anual_pct": "Combustiveis (%)", "IPCA transportes": "IPCA transportes (%)"},
         )
         scat.update_traces(textposition="top center")
+        apply_legend(scat, "Serie")
         st.plotly_chart(scat, use_container_width=True)
 
     with c2:
         corr_cols = ["var_preco_comb_anual_pct", "IPCA geral", "IPCA transportes", "IPCA alimentacao e bebidas"]
         corr = merged[corr_cols].corr().round(3)
         heat = px.imshow(corr, text_auto=True, color_continuous_scale="RdBu", zmin=-1, zmax=1, title="Matriz de correlacao")
+        heat.update_layout(coloraxis_colorbar=dict(title="Correlacao"))
         st.plotly_chart(heat, use_container_width=True)
 
 
@@ -556,6 +576,7 @@ def render_sales_volume_views() -> None:
             title="Volume anual empilhado por combustivel",
             labels={"volume": "Volume", "ano": "Ano", "produto_grupo": "Produto"},
         )
+        apply_legend(bar, "Produto")
         st.plotly_chart(bar, use_container_width=True)
 
     with c2:
@@ -567,6 +588,7 @@ def render_sales_volume_views() -> None:
             title="Share anual do etanol no volume",
             labels={"share_etanol": "Share etanol", "ano": "Ano"},
         )
+        apply_legend(line, "Serie")
         st.plotly_chart(line, use_container_width=True)
 
     co2 = load_co2e_annual()[["ano", "co2e_mt"]]
@@ -591,6 +613,7 @@ def render_sales_volume_views() -> None:
         labels={"share_etanol": "Share etanol", "co2e_mt": "CO2e nacional (Mt)"},
     )
     scat.update_traces(textposition="top center")
+    apply_legend(scat, "Serie")
     st.plotly_chart(scat, use_container_width=True)
 
 
@@ -609,10 +632,12 @@ def render_emission_transition_views() -> None:
     with c1:
         fig = px.line(panel, x="ano", y="co2e_mt", markers=True, title="CO2e nacional")
         fig.update_layout(yaxis_title="Mt CO2e")
+        apply_legend(fig, "Serie")
         st.plotly_chart(fig, use_container_width=True)
     with c2:
         fig = px.line(panel, x="ano", y="ratio_etanol_gasolina", markers=True, title="Razao etanol/gasolina")
         fig.update_layout(yaxis_title="Razao de preco")
+        apply_legend(fig, "Serie")
         st.plotly_chart(fig, use_container_width=True)
 
     scat = px.scatter(
@@ -625,6 +650,7 @@ def render_emission_transition_views() -> None:
         labels={"ratio_etanol_gasolina": "Razao etanol/gasolina", "co2e_mt": "CO2e (Mt)"},
     )
     scat.update_traces(textposition="top center")
+    apply_legend(scat, "Serie")
     st.plotly_chart(scat, use_container_width=True)
 
     ev = load_ev_annual()
@@ -637,12 +663,14 @@ def render_emission_transition_views() -> None:
     with c3:
         fig = px.line(merged_ev, x="ano", y="total_eletrificados", markers=True, title="Serie anual de eletrificados")
         fig.update_layout(yaxis_title="Total")
+        apply_legend(fig, "Serie")
         st.plotly_chart(fig, use_container_width=True)
     with c4:
         avail = merged_ev.dropna(subset=["co2e_mt"])
         if not avail.empty:
             fig = px.scatter(avail, x="total_eletrificados", y="co2e_mt", text="ano", trendline="ols" if len(avail) >= 3 else None, title="Eletrificados vs CO2e")
             fig.update_traces(textposition="top center")
+            apply_legend(fig, "Serie")
             st.plotly_chart(fig, use_container_width=True)
 
 
@@ -692,7 +720,8 @@ def render_regional_rankings() -> None:
             color_discrete_map=REGION_COLORS,
             title="Distribuicao de precos por regiao",
         )
-        fig.update_layout(showlegend=False, xaxis_title="Regiao", yaxis_title="Preco (R$/litro)")
+        apply_legend(fig, "Regiao")
+        fig.update_layout(xaxis_title="Regiao", yaxis_title="Preco (R$/litro)")
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -715,7 +744,7 @@ def render_regional_rankings() -> None:
             title="Top 10 UFs com maior preco medio",
         )
         fig.update_traces(textposition="outside", cliponaxis=False)
-        fig.update_layout(coloraxis_showscale=False, margin=dict(r=70), xaxis_title="Preco medio (R$/litro)")
+        fig.update_layout(coloraxis_colorbar=dict(title="Preco medio"), margin=dict(r=90), xaxis_title="Preco medio (R$/litro)")
         st.plotly_chart(fig, use_container_width=True)
 
 
