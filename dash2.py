@@ -751,34 +751,6 @@ def render_sales_volume_views() -> None:
         ],
     )
 
-    co2 = load_co2e_annual()[["ano", "co2e_mt"]]
-    merged = pivot.merge(co2, on="ano", how="left")
-    available = merged.dropna(subset=["co2e_mt", "share_etanol"]).copy()
-
-    if available.empty:
-        st.info("Sem anos sobrepostos com CO2e para o scatter de emissao.")
-        return
-
-    miss = sorted(set(merged["ano"]) - set(available["ano"]))
-    if miss:
-        st.caption(f"Anos sem CO2e para o cruzamento: {', '.join(str(x) for x in miss)}")
-
-    scat = px.scatter(
-        available,
-        x="share_etanol",
-        y="co2e_mt",
-        text="ano",
-        trendline="ols" if len(available) >= 3 else None,
-        title="Share etanol (volume) vs CO2e",
-        labels={"share_etanol": "Share etanol", "co2e_mt": "CO2e nacional (Mt)"},
-    )
-    scat.update_traces(textposition="top center")
-    apply_legend(scat, "Serie")
-    st.caption("Como ler: cruza share do etanol com emissao nacional (Mt CO2e). A linha de tendencia ajuda a visualizar se ha associacao entre as variaveis.")
-    st.plotly_chart(scat, use_container_width=True)
-
-
-
 def render_emission_transition_views() -> None:
     st.subheader("Emissoes e transicao")
     fuel = load_fuel_annual_metrics()
