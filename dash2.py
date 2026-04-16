@@ -834,20 +834,6 @@ def render_emission_transition_views() -> None:
         st.caption("Como ler: cada ponto e um ano; a linha tracejada marca 0,70 (regra pratica de competitividade do etanol).")
         st.plotly_chart(fig, use_container_width=True)
 
-    scat = px.scatter(
-        panel,
-        x="ratio_etanol_gasolina",
-        y="co2e_mt",
-        text="ano",
-        trendline="ols" if len(panel) >= 3 else None,
-        title="Razao etanol/gasolina vs CO2e",
-        labels={"ratio_etanol_gasolina": "Razao etanol/gasolina", "co2e_mt": "CO2e (Mt)"},
-    )
-    scat.update_traces(textposition="top center")
-    apply_legend(scat, "Serie")
-    st.caption("Como ler: cada ponto e um ano com razao etanol/gasolina no eixo X e CO2e no eixo Y. Use para avaliar possivel relacao entre preco relativo e emissao.")
-    st.plotly_chart(scat, use_container_width=True)
-
     panel_o = panel.sort_values("ano")
     co2_var = pct_change(panel_o.iloc[0]["co2e_mt"], panel_o.iloc[-1]["co2e_mt"]) if len(panel_o) >= 2 else None
     ratio_var = pct_change(panel_o.iloc[0]["ratio_etanol_gasolina"], panel_o.iloc[-1]["ratio_etanol_gasolina"]) if len(panel_o) >= 2 else None
