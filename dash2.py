@@ -862,69 +862,6 @@ def render_emission_transition_views() -> None:
         ],
     )
 
-    ev = load_ev_annual()
-    if ev.empty:
-        st.caption("Base de eletrificados nao encontrada em outputs/abve_eletrificados_serie_anual.parquet (ou csv fallback).")
-        return
-
-    merged_ev = ev.merge(co2[["ano", "co2e_mt"]], on="ano", how="left")
-    c3, c4 = st.columns(2)
-    with c3:
-        fig = px.bar(
-            merged_ev.sort_values("ano"),
-            x="ano",
-            y="total_eletrificados",
-            title="Total anual de eletrificados",
-            labels={"total_eletrificados": "Total", "ano": "Ano"},
-            color="total_eletrificados",
-            color_continuous_scale="Blues",
-        )
-        fig.update_layout(yaxis_title="Total")
-        st.caption("Como ler: barras permitem comparar rapidamente o ganho absoluto de eletrificados entre anos.")
-        st.plotly_chart(fig, use_container_width=True)
-    with c4:
-        avail = merged_ev.dropna(subset=["co2e_mt"])
-        if not avail.empty:
-            fig = px.scatter(avail, x="total_eletrificados", y="co2e_mt", text="ano", trendline="ols" if len(avail) >= 3 else None, title="Eletrificados vs CO2e")
-            fig.update_traces(textposition="top center")
-            apply_legend(fig, "Serie")
-            st.caption("Como ler: relaciona total de eletrificados e emissao nacional. A leitura e exploratoria e nao implica causalidade direta.")
-            st.plotly_chart(fig, use_container_width=True)
-
-            avail_o = avail.sort_values("ano").copy()
-            n_obs = len(avail_o)
-            corr_ev = avail_o[["total_eletrificados", "co2e_mt"]].corr().iloc[0, 1] if n_obs >= 2 else pd.NA
-            ev_var = pct_change(avail_o.iloc[0]["total_eletrificados"], avail_o.iloc[-1]["total_eletrificados"]) if n_obs >= 2 else None
-            co2_var_ev = pct_change(avail_o.iloc[0]["co2e_mt"], avail_o.iloc[-1]["co2e_mt"]) if n_obs >= 2 else None
-
-            if n_obs < 3:
-                st.warning(f"Amostra pequena para correlacao (n={n_obs}). Com menos de 3 pontos, o resultado e inconclusivo.")
-            elif n_obs < 5:
-                st.info(f"Amostra reduzida para correlacao (n={n_obs}). Trate a leitura como evidencia preliminar.")
-            else:
-                st.caption(f"Amostra utilizada na correlacao: n={n_obs} anos com dados sobrepostos.")
-
-            if pd.notna(corr_ev):
-                if n_obs < 3:
-                    corr_line = f"Correlacao observada: {corr_ev:.2f} (n={n_obs}), mas estatisticamente inconclusiva pela amostra muito pequena."
-                elif n_obs < 5:
-                    corr_line = f"Correlacao observada: {corr_ev:.2f} (n={n_obs}); interpretacao preliminar, com alta incerteza."
-                else:
-                    corr_line = f"Correlacao entre eletrificados e CO2e: {corr_ev:.2f} (n={n_obs})."
-            else:
-                corr_line = "Correlacao entre eletrificados e CO2e indisponivel por falta de anos comparaveis."
-
-            render_generated_text(
-                "Leitura automatica: eletrificados",
-                [
-                    f"Nos anos com sobreposicao de dados, eletrificados variaram {format_pct(ev_var)} e o CO2e variou {format_pct(co2_var_ev)}.",
-                    corr_line,
-                    "A analise e descritiva: nao permite concluir causalidade entre eletrificacao e emissao nacional.",
-                ],
-            )
-
-
-
 def render_regional_rankings() -> None:
     st.subheader("Diagnostico regional e rankings")
     if FUEL_MUN_DIST_FILE.exists():
@@ -1028,13 +965,19 @@ def main() -> None:
 
     st.markdown("## ❓ Perguntas Analíticas")
     st.markdown("""
-    1. Como evoluiu o consumo de combustíveis ao longo do tempo?
-    2. Quais regiões apresentam maior consumo?
-    3. Existe relação entre consumo de combustível e emissão de CO2?
-    4. Qual combustível é mais utilizado?
-    5. Há crescimento no uso de veículos eletrificados?
-    6. Existem diferenças significativas entre estados?
-    7. Há tendência de aumento ou redução de emissões?
+    1. Como o consumo de combustiveis evoluiu ao longo do tempo?
+    2. Existe diferenca consistente entre os precos de etanol e gasolina?
+    3. Como evoluem os precos dos diferentes combustiveis ao longo do tempo?
+    4. Qual combustivel apresenta maior estabilidade de precos?
+    5. Existe diferenca de precos entre regioes ao longo do tempo?
+    6. Quais regioes apresentam maiores niveis de precos?
+    7. Quais estados apresentam os maiores precos medios?
+    8. Como os combustiveis se comportam em relacao a inflacao?
+    9. Os combustiveis sao mais instaveis que a inflacao?
+    10. Existe relacao entre combustiveis e inflacao de transportes?
+    11. Como evoluiu o volume total de combustiveis ao longo do tempo?
+    12. Qual combustivel mais contribui para o volume total?
+    13. Como evoluiram as emissoes de CO2e ao longo do tempo?
     """)
     #st.caption(
     #    "Revisao completa das visoes do projeto com foco em leitura executiva, comparabilidade anual e exploracao interativa."
