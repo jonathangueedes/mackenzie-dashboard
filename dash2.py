@@ -966,18 +966,17 @@ def main() -> None:
     st.markdown("## ❓ Perguntas Analíticas")
     st.markdown("""
     1. Como o consumo de combustiveis evoluiu ao longo do tempo?
-    2. Existe diferenca consistente entre os precos de etanol e gasolina?
-    3. Como evoluem os precos dos diferentes combustiveis ao longo do tempo?
-    4. Qual combustivel apresenta maior estabilidade de precos?
-    5. Existe diferenca de precos entre regioes ao longo do tempo?
-    6. Quais regioes apresentam maiores niveis de precos?
-    7. Quais estados apresentam os maiores precos medios?
-    8. Como os combustiveis se comportam em relacao a inflacao?
-    9. Os combustiveis sao mais instaveis que a inflacao?
-    10. Existe relacao entre combustiveis e inflacao de transportes?
-    11. Como evoluiu o volume total de combustiveis ao longo do tempo?
-    12. Qual combustivel mais contribui para o volume total?
-    13. Como evoluiram as emissoes de CO2e ao longo do tempo?
+    2. Como evoluem os precos dos diferentes combustiveis ao longo do tempo?
+    3. Qual combustivel apresenta maior estabilidade de precos?
+    4. Existe diferenca de precos entre regioes ao longo do tempo?
+    5. Quais regioes apresentam maiores niveis de precos?
+    6. Quais estados apresentam os maiores precos medios?
+    7. Como os combustiveis se comportam em relacao a inflacao?
+    8. Os combustiveis sao mais instaveis que a inflacao?
+    9. Existe relacao entre combustiveis e inflacao de transportes?
+    10. Como evoluiu o volume total de combustiveis ao longo do tempo?
+    11. Qual combustivel mais contribui para o volume total?
+    12. Como evoluiram as emissoes de CO2e ao longo do tempo?
     """)
     #st.caption(
     #    "Revisao completa das visoes do projeto com foco em leitura executiva, comparabilidade anual e exploracao interativa."
